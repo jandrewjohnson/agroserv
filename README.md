@@ -1,0 +1,3 @@
+# Agroserv implementation of SEALS model
+
+Because SEALS is still a relatively new software tool for NatCap, a specialized implementation, provided here, was required for this project. To install, just clone the repo and then run seals_model_agroserv.py, fix any import statements (there will be several, check out the requirements.txt for faster fixing) iteratively until the code runs. The input data is not in version control, so when this code gets running to the point of not finding the data, contact Justin.
