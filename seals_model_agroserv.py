@@ -5,14 +5,11 @@ import numpy as np
 from osgeo import gdal
 
 import hazelbean as hb
-from hazelbean.ui import model, inputs
 
 import seals_utils
 import seals_ui
 
 logging.basicConfig(level=logging.WARNING)
-hb.ui.model.LOGGER.setLevel(logging.WARNING)
-hb.ui.inputs.LOGGER.setLevel(logging.WARNING)
 
 L = hb.get_logger('seals', logging_level='warning')
 L.setLevel(logging.INFO)
@@ -122,6 +119,7 @@ def create_lulc(p):
         if os.path.exists(p.lulc_class_types_path):
             # load the simplified class correspondnce as a nested dictionary.
             lulc_class_types_odict = hb.file_to_python_object(p.lulc_class_types_path, declare_type='DD')
+            print('lulc_class_types_odict', lulc_class_types_odict)
 
             # For cythonization reasons, I need to ensure this comes in as ints
             lulc_class_types_ints_dict = dict()
@@ -132,8 +130,8 @@ def create_lulc(p):
             # # 1 is agriculture, 2 is mixed ag/natural, 3 is natural, 4 is urban, 0 is no data
             lulc_simplified_array = hb.reclassify_int_array_by_dict_to_ints(lulc_array, lulc_class_types_ints_dict)
             no_data_value_override = hb.get_nodata_from_uri(p.base_year_current_zone_lulc_path)
-            hb.save_array_as_geotiff(lulc_simplified_array, p.lulc_simplified_path, p.base_year_current_zone_lulc_path, data_type_override=1, set_inf_to_no_data_value=False,
-                                     no_data_value_override=no_data_value_override, compress=True)
+            hb.save_array_as_geotiff(lulc_simplified_array, p.lulc_simplified_path, p.base_year_current_zone_lulc_path, data_type=1, set_inf_to_no_data_value=False,
+                                     ndv=no_data_value_override, compress=True)
     else:
         p.lulc_simplified_path = p.base_year_current_zone_lulc_path
 
@@ -163,7 +161,8 @@ def create_physical_suitability(p):
     # tri_array = hb.as_array(tri_path)
     # physical_suitability_array = np.log(soc_array) - np.log(tri_array)
 
-    p.global_physical_suitability_path = os.path.join(p.model_base_data_dir, 'physical_suitability_compressed.tif')
+    p.model_base_data_dir = '../agroserv_base_data'
+    p.global_physical_suitability_path = os.path.join(p.model_base_data_dir, 'physical_suitability_brazil_buffered_compressed.tif')
     p.physical_suitability_path = os.path.join(p.cur_dir, 'physical_suitability.tif')
     if p.run_this:
         # hb.clip_raster_by_vector(p.global_physical_suitability_path, p.physical_suitability_path, p.coarse_res_aoi_path, all_touched=True)
@@ -184,7 +183,7 @@ def create_physical_suitability(p):
         physical_suitability_array = np.where(physical_suitability_array > -1000, physical_suitability_array, 0)
         physical_suitability_array = np.where(physical_suitability_array < 100000000, physical_suitability_array, 0)
 
-        hb.save_array_as_geotiff(physical_suitability_array, p.physical_suitability_path, p.match_int_path, data_type_override=6, compress=True)
+        hb.save_array_as_geotiff(physical_suitability_array, p.physical_suitability_path, p.match_int_path, data_type=6, compress=True)
 
 
 def create_convolution_inputs(p):
@@ -256,7 +255,7 @@ def create_conversion_eligibility(p):
             conversion_eligibility_array = np.zeros(simplified_lulc_array.shape).astype(np.float64)
             for j in p.simplified_lulc_classes:
                 conversion_eligibility_array = np.where(simplified_lulc_array == j, conversion_eligibility_params[str(j)][str(i)], conversion_eligibility_array)
-            hb.save_array_as_geotiff(conversion_eligibility_array, conversion_eligibility_raster_path, p.match_int_path, data_type_override=6, compress=True)
+            hb.save_array_as_geotiff(conversion_eligibility_array, conversion_eligibility_raster_path, p.match_int_path, data_type=6, compress=True)
 
 
 def create_overall_suitability(p):
@@ -309,7 +308,7 @@ def create_overall_suitability(p):
             overall_suitability_array = np.where(np.isnan(overall_suitability_array), 0, overall_suitability_array)
             overall_suitability_array = np.where(overall_suitability_array < 0, 0, overall_suitability_array)
             print('overall_suitability_array mean', np.mean(overall_suitability_array))
-            hb.save_array_as_geotiff(overall_suitability_array, suitability_path, p.match_int_path, data_type_override=6, compress=True)
+            hb.save_array_as_geotiff(overall_suitability_array, suitability_path, p.match_int_path, data_type=6, compress=True)
 
         # # NOTE, i force a resample here, thus making the ipbes also 5min. consider making exclipcit.
         # temp1 = hb.temp('.tif', folder=p.workspace_dir, remove_at_exit=True)
@@ -412,7 +411,7 @@ def create_allocation_from_change_map(p):
             hb.save_array_as_geotiff(combined_rank_array, p.combined_rank_array_path, p.match_int_path, compress=True)
 
         p.projected_lulc_path = hb.ruri(os.path.join(p.cur_dir, 'projected_lulc.tif'))
-        hb.save_array_as_geotiff(new_lulc_array, p.projected_lulc_path, p.match_int_path, no_data_value_override=255, data_type_override=1, compress=True)
+        hb.save_array_as_geotiff(new_lulc_array, p.projected_lulc_path, p.match_int_path, ndv=255, data_type=1, compress=True)
 
         p.projected_lulc_masked_path = hb.ruri(os.path.join(p.cur_dir, 'projected_lulc_masked.tif'))
         hb.set_ndv_by_mask_path(p.projected_lulc_path, p.valid_mask_path, p.projected_lulc_masked_path)
@@ -457,10 +456,9 @@ def stitch_projections(p):
 
 main = ''
 if __name__ == '__main__':
-    from hazelbean.ui import model, inputs
 
     # TODOO Full solution would remove this hard-code and instead have it be from the user input. Note that this means the tree and it's task dirs are set only upon execute and nothing can be created in the tasknode creation algorithm besides the raw relationships..
-    p = hb.ProjectFlow('../projects/russia_example')
+    p = hb.ProjectFlow()
 
     # pre_batch_task = p.add_task(validate_project_input_data)
     # pre_batch_task.creates_dir = False
@@ -495,4 +493,4 @@ if __name__ == '__main__':
 
     ui = seals_ui.SealsUI(p)
     ui.run()
-    EXITCODE = inputs.QT_APP.exec_()  # Enter the Qt application event loop. Without this line the UI will launch and then close.
+    EXITCODE = hb.ui.inputs.QT_APP.exec_()  # Enter the Qt application event loop. Without this line the UI will launch and then close.
