@@ -47,7 +47,7 @@ pyshp==1.2.12
 python-dateutil==2.7.3
 pytz==2018.4
 pywin32-ctypes==0.1.2
-PyYAML==3.12
+PyYAML==5.4
 QtAwesome==0.4.4
 QtPy==1.4.2
 rasterio==0.36.0
